@@ -1,0 +1,9 @@
+hcloud_token          = "YOUR_HCLOUD_API_TOKEN"
+ssh_key_fingerprint   = "YOUR_SSH_KEY_FINGERPRINT"
+
+# Optional overrides:
+# cluster_name   = "hermes"
+# server_type    = "cpx22"
+# location       = "fsn1"
+# os_image       = "ubuntu-24.04"
+# ssh_user       = "hermes"

@@ -1,0 +1,38 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - git
+  - curl
+  - ca-certificates
+
+users:
+  - name: ${non_root_user}
+    groups: sudo
+    shell: /bin/bash
+    sudo: "ALL=(ALL) NOPASSWD:ALL"
+    ssh_authorized_keys:
+      - ${ssh_authorized_key}
+
+runcmd:
+  # Install Hermes Agent as the non-root user
+  - su - ${non_root_user} -c 'curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash'
+
+write_files:
+  - path: /etc/update-motd.d/99-hermes-motd
+    permissions: "0755"
+    content: |
+      #!/bin/sh
+      echo ""
+      echo "================================================"
+      echo "  Hermes Agent is installed on this server"
+      echo "================================================"
+      echo "  Run: hermes setup                          (one-time config wizard)"
+      echo "  Run: sudo hermes gateway install --system   (install as boot-time systemd service)"
+      echo "  Run: sudo hermes gateway start --system     (start the gateway)"
+      echo "  Run: hermes chat                            (interactive CLI)"
+      echo "================================================"
+
+final_message: "Hermes Agent installation complete. SSH in as '${non_root_user}' and run 'hermes setup'."
