@@ -1,0 +1,109 @@
+---
+- name: Fetch server IP from terraform
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Read terraform outputs
+      ansible.builtin.command: terraform output -json
+      args:
+        chdir: ../terraform
+      register: tf_output
+      changed_when: false
+
+    - name: Add grocery host dynamically
+      ansible.builtin.add_host:
+        name: grocery
+        ansible_host: "{{ (tf_output.stdout | from_json).server_ipv4.value }}"
+        ansible_user: "{{ tf_user }}"
+        groups: hermes
+      vars:
+        tf_user: >-
+          {{ (tf_output.stdout | from_json).ssh_connection.value
+             | regex_replace('^ssh ([^@]+)@.*', '\1') }}
+
+- name: Configure Hermes Grocery application
+  hosts: hermes
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+    - vars/secrets.yml
+
+  tasks:
+    - name: Ensure app directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Deploy Hermes config
+      ansible.builtin.copy:
+        src: files/config.yaml
+        dest: "{{ app_dir }}/config.yaml"
+        mode: "0644"
+
+    - name: Deploy AGENTS.md
+      ansible.builtin.copy:
+        src: files/AGENTS.md
+        dest: "{{ app_dir }}/AGENTS.md"
+        mode: "0644"
+
+    - name: Deploy SOUL.md
+      ansible.builtin.copy:
+        src: files/SOUL.md
+        dest: "{{ app_dir }}/SOUL.md"
+        mode: "0644"
+
+    - name: Log in to Matrix to obtain access token
+      ansible.builtin.uri:
+        url: "{{ matrix_homeserver }}/_matrix/client/v3/login"
+        method: POST
+        body_format: json
+        body:
+          type: m.login.password
+          identifier:
+            type: m.id.user
+            user: "{{ matrix_user_id }}"
+          password: "{{ matrix_password }}"
+          device_id: "{{ matrix_device_id }}"
+        status_code: 200
+        return_content: true
+      register: matrix_login
+      when: matrix_password is defined and matrix_password | length > 0
+      no_log: true
+      ignore_errors: true
+
+    - name: Set resolved access token
+      ansible.builtin.set_fact:
+        _matrix_access_token: >-
+          {{ matrix_login.json.access_token
+             if (matrix_login is defined and matrix_login is not failed and matrix_login.json is defined and matrix_login.json.access_token is defined)
+             else matrix_access_token | default('') }}
+
+    - name: Deploy .env
+      ansible.builtin.template:
+        src: templates/.env.j2
+        dest: "{{ app_dir }}/.env"
+        mode: "0600"
+
+    - name: Deploy systemd service
+      ansible.builtin.template:
+        src: templates/hermes-grocery-gateway.service.j2
+        dest: /etc/systemd/system/hermes-grocery-gateway.service
+        mode: "0644"
+      become: true
+      notify: restart gateway
+
+  handlers:
+    - name: reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+      become: true
+      listen: restart gateway
+
+    - name: enable and start hermes-grocery-gateway
+      ansible.builtin.systemd:
+        name: hermes-grocery-gateway
+        enabled: true
+        state: restarted
+      become: true
+      listen: restart gateway

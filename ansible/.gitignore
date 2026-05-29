@@ -1,0 +1,14 @@
+# Unencrypted secrets (encrypt with ansible-vault before committing)
+vars/secrets.yml
+
+# uv virtual environment
+.venv/
+
+# Ansible vault password file
+.vault_pass
+
+# Unencrypted secrets (encrypt with ansible-vault before committing)
+vars/secrets.yml
+
+# Ansible retry files
+*.retry

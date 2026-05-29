@@ -1,0 +1,35 @@
+ansible := "uv run ansible-playbook"
+vault   := "uv run ansible-vault"
+
+default: help
+
+help:
+    @echo "Usage: just <command>"
+    @echo ""
+    @echo "Commands:"
+    @echo "  deploy     Run the playbook against the server"
+    @echo "  encrypt    Encrypt vars/secrets.yml with ansible-vault"
+    @echo "  decrypt    Decrypt vars/secrets.yml for editing"
+    @echo "  edit       Edit vars/secrets.yml in-place (decrypt → edit → re-encrypt)"
+    @echo "  lint       Syntax-check the playbook (no connection needed)"
+    @echo "  help       Show this help"
+
+# Run the playbook against the server
+deploy:
+    {{ ansible }} playbook.yml
+
+# Encrypt vars/secrets.yml with ansible-vault
+encrypt:
+    {{ vault }} encrypt vars/secrets.yml
+
+# Decrypt vars/secrets.yml for editing
+decrypt:
+    {{ vault }} decrypt vars/secrets.yml
+
+# Edit vars/secrets.yml in-place (decrypt → edit → re-encrypt)
+edit:
+    {{ vault }} edit vars/secrets.yml
+
+# Syntax-check the playbook (no connection needed)
+lint:
+    {{ ansible }} playbook.yml --syntax-check

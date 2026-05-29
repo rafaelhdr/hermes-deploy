@@ -1,0 +1,8 @@
+---
+app_dir: /home/hermes/hermes-grocery
+hermes_bin: /home/hermes/.hermes/hermes-agent/venv/bin/hermes
+
+matrix_homeserver: https://matrix.org
+matrix_encryption: "true"
+matrix_device_id: HERMES_GROCERY
+matrix_home_room_thread_id: ""

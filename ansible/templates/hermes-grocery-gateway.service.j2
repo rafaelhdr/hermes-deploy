@@ -1,0 +1,15 @@
+[Unit]
+Description=Hermes Grocery Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Environment=HERMES_HOME={{ app_dir }}
+ExecStart={{ hermes_bin | default('/home/hermes/.hermes/hermes-agent/venv/bin/hermes') }} gateway run
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target
