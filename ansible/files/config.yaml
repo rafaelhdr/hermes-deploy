@@ -372,7 +372,7 @@ mattermost:
   allowed_channels: ''
   channel_prompts: {}
 matrix:
-  require_mention: true
+  require_mention: false
   free_response_rooms: ''
   allowed_rooms: '!XvaIvHAfyWIsaWsGOi:matrix.org'
 approvals:
