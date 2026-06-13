@@ -43,5 +43,11 @@ variable "ssh_key_fingerprint" {
 variable "allowed_ssh_cidrs" {
   description = "CIDR blocks allowed to SSH in"
   type        = list(string)
-  default     = ["0.0.0.0/0", "::/0"]
+  default     = ["10.250.163.0/24"]
+}
+
+variable "zerotier_network_id" {
+  description = "ZeroTier network ID to join on first boot"
+  type        = string
+  sensitive   = true
 }

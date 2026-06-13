@@ -25,6 +25,7 @@ data "cloudinit_config" "hermes" {
     content = templatefile("${path.module}/cloud-init.yaml", {
       non_root_user       = var.ssh_user
       ssh_authorized_key  = data.hcloud_ssh_key.hermes.public_key
+      zerotier_network_id = var.zerotier_network_id
     })
   }
 }

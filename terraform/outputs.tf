@@ -16,8 +16,9 @@ output "ssh_connection" {
 output "next_steps" {
   description = "Commands to run after SSH"
   value = [
-    "1. ssh ${var.ssh_user}@${hcloud_server.hermes.ipv4_address}",
-    "2. Run: hermes setup",
-    "3. Optional: sudo systemctl enable --now hermes-gateway (to start the messaging gateway)"
+    "1. ssh ${var.ssh_user}@${hcloud_server.hermes.ipv4_address}  (public IP — use until ZeroTier is authorized)",
+    "2. Authorize the new node in ZeroTier Central, then use the assigned 10.250.163.x address for SSH going forward",
+    "3. Run: hermes setup",
+    "4. Optional: sudo systemctl enable --now hermes-gateway (to start the messaging gateway)"
   ]
 }

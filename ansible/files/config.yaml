@@ -483,6 +483,8 @@ group_sessions_per_user: true
 platform_toolsets:
   cli:
   - hermes-cli
+  matrix:
+  - hermes-matrix
   discord:
   - hermes-discord
   google_chat:

@@ -1,0 +1,59 @@
+---
+- name: Remove stale Matrix bot devices
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+    - vars/secrets.yml
+
+  tasks:
+    - name: Log in to Matrix to obtain access token
+      ansible.builtin.uri:
+        url: "{{ matrix_homeserver }}/_matrix/client/v3/login"
+        method: POST
+        body_format: json
+        body:
+          type: m.login.password
+          identifier:
+            type: m.id.user
+            user: "{{ matrix_user_id }}"
+          password: "{{ matrix_password }}"
+        status_code: 200
+        return_content: true
+      register: matrix_login
+      no_log: true
+
+    - name: List current devices
+      ansible.builtin.uri:
+        url: "{{ matrix_homeserver }}/_matrix/client/v3/devices"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ matrix_login.json.access_token }}"
+        status_code: 200
+        return_content: true
+      register: matrix_devices
+
+    - name: Show current devices
+      ansible.builtin.debug:
+        msg: "{{ matrix_devices.json.devices | map(attribute='device_id') | list }}"
+
+    - name: Delete stale devices (all except the current session)
+      ansible.builtin.uri:
+        url: "{{ matrix_homeserver }}/_matrix/client/v3/devices/{{ item.device_id }}"
+        method: DELETE
+        headers:
+          Authorization: "Bearer {{ matrix_login.json.access_token }}"
+        body_format: json
+        body:
+          auth:
+            type: m.login.password
+            identifier:
+              type: m.id.user
+              user: "{{ matrix_user_id }}"
+            password: "{{ matrix_password }}"
+        status_code: [200, 404]
+      loop: "{{ matrix_devices.json.devices }}"
+      when: item.device_id != matrix_login.json.device_id
+      no_log: true
+      loop_control:
+        label: "{{ item.device_id }}"

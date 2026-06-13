@@ -10,6 +10,7 @@ Environment=HERMES_HOME={{ app_dir }}
 ExecStart={{ hermes_bin | default('/home/hermes/.hermes/hermes-agent/venv/bin/hermes') }} gateway run
 Restart=on-failure
 RestartSec=10
+TimeoutStopSec=210
 
 [Install]
 WantedBy=default.target

@@ -1,7 +1,9 @@
 ---
-- name: Fetch server IP from terraform
+- name: Prepare inventory
   hosts: localhost
   gather_facts: false
+  vars_files:
+    - vars/secrets.yml
   tasks:
     - name: Read terraform outputs
       ansible.builtin.command: terraform output -json
@@ -13,7 +15,7 @@
     - name: Add grocery host dynamically
       ansible.builtin.add_host:
         name: grocery
-        ansible_host: "{{ (tf_output.stdout | from_json).server_ipv4.value }}"
+        ansible_host: "{{ zerotier_ip }}"
         ansible_user: "{{ tf_user }}"
         groups: hermes
       vars:
@@ -29,6 +31,22 @@
     - vars/secrets.yml
 
   tasks:
+    - name: Install libolm-dev
+      ansible.builtin.apt:
+        name: libolm-dev
+        state: present
+        update_cache: true
+      become: true
+
+    - name: Install mautrix encryption extras and db drivers
+      ansible.builtin.pip:
+        name:
+          - mautrix[encryption]
+          - asyncpg
+          - aiosqlite
+        virtualenv: /home/hermes/.hermes/hermes-agent/venv
+        state: present
+
     - name: Ensure app directory exists
       ansible.builtin.file:
         path: "{{ app_dir }}"
@@ -40,6 +58,7 @@
         src: files/config.yaml
         dest: "{{ app_dir }}/config.yaml"
         mode: "0644"
+      notify: restart gateway
 
     - name: Deploy AGENTS.md
       ansible.builtin.copy:
@@ -64,7 +83,6 @@
             type: m.id.user
             user: "{{ matrix_user_id }}"
           password: "{{ matrix_password }}"
-          device_id: "{{ matrix_device_id }}"
         status_code: 200
         return_content: true
       register: matrix_login
@@ -72,18 +90,28 @@
       no_log: true
       ignore_errors: true
 
-    - name: Set resolved access token
+    - name: Set resolved access token and device id
       ansible.builtin.set_fact:
         _matrix_access_token: >-
           {{ matrix_login.json.access_token
              if (matrix_login is defined and matrix_login is not failed and matrix_login.json is defined and matrix_login.json.access_token is defined)
              else matrix_access_token | default('') }}
+        _matrix_device_id: >-
+          {{ matrix_login.json.device_id
+             if (matrix_login is defined and matrix_login is not failed and matrix_login.json is defined and matrix_login.json.device_id is defined)
+             else '' }}
+
+    - name: Remove Matrix crypto store for clean session
+      ansible.builtin.file:
+        path: "{{ app_dir }}/platforms/matrix/store/crypto.db"
+        state: absent
 
     - name: Deploy .env
       ansible.builtin.template:
         src: templates/.env.j2
         dest: "{{ app_dir }}/.env"
         mode: "0600"
+      notify: restart gateway
 
     - name: Deploy systemd service
       ansible.builtin.template:
