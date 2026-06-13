@@ -30,6 +30,10 @@ decrypt:
 edit:
     {{ vault }} edit vars/secrets.yml
 
+# Remove stale Matrix bot devices (run after a server rebuild)
+remove-bot-devices:
+    {{ ansible }} remove-matrix-devices.yml
+
 # Syntax-check the playbook (no connection needed)
 lint:
     {{ ansible }} playbook.yml --syntax-check
