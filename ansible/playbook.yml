@@ -77,8 +77,8 @@
         mode: "0755"
 
     - name: Deploy Hermes config
-      ansible.builtin.copy:
-        src: files/config.yaml
+      ansible.builtin.template:
+        src: templates/config.yaml.j2
         dest: "{{ app_dir }}/config.yaml"
         mode: "0644"
       notify: restart gateway
@@ -144,8 +144,8 @@
       notify: restart dashboard
 
     - name: Deploy ~/.hermes/config.yaml
-      ansible.builtin.copy:
-        src: files/config.yaml
+      ansible.builtin.template:
+        src: templates/config.yaml.j2
         dest: /home/hermes/.hermes/config.yaml
         mode: "0644"
       notify: restart dashboard

@@ -3,6 +3,15 @@ app_dir: /home/hermes/hermes-grocery
 hermes_bin: /home/hermes/.hermes/hermes-agent/venv/bin/hermes
 ssh_user: hermes
 
+# Switch here to change the active LLM provider: 'minimax' or 'deepseek'
+active_provider: minimax
+
+providers:
+  deepseek:
+    default_model: deepseek-v4-flash
+  minimax:
+    default_model: MiniMax-M2.7
+
 matrix_homeserver: https://matrix.org
 matrix_encryption: "true"
 matrix_e2ee_mode: "required"

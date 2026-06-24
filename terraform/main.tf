@@ -40,14 +40,14 @@ resource "hcloud_firewall" "hermes" {
   rule {
     direction  = "in"
     protocol   = "tcp"
-    port       = "22"
+    port       = "9119"
     source_ips = var.allowed_ssh_cidrs
   }
 
   rule {
     direction  = "in"
-    protocol   = "tcp"
-    port       = "9119"
+    protocol   = "udp"
+    port       = "9993"
     source_ips = var.allowed_ssh_cidrs
   }
 }
