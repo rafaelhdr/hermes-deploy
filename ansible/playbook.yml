@@ -38,14 +38,37 @@
         update_cache: true
       become: true
 
-    - name: Install mautrix encryption extras and db drivers
+    - name: Install Node.js 22 (NodeSource)
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+        creates: /etc/apt/sources.list.d/nodesource.list
+      become: true
+
+    - name: Install Node.js
+      ansible.builtin.apt:
+        name: nodejs
+        state: present
+        update_cache: true
+      become: true
+
+    - name: Install mautrix encryption extras, db drivers, and web deps
       ansible.builtin.pip:
         name:
-          - mautrix[encryption]
-          - asyncpg
           - aiosqlite
+          - asyncpg
+          - fastapi
+          - mautrix[encryption]
+          - ptyprocess
+          - uvicorn[standard]
         virtualenv: /home/hermes/.hermes/hermes-agent/venv
         state: present
+
+    - name: Build dashboard web frontend
+      ansible.builtin.shell:
+        cmd: npm install && npm run build
+        chdir: /home/hermes/.hermes/hermes-agent/web
+      become: true
+      become_user: hermes
 
     - name: Ensure app directory exists
       ansible.builtin.file:
@@ -113,6 +136,20 @@
         mode: "0600"
       notify: restart gateway
 
+    - name: Deploy ~/.hermes/.env
+      ansible.builtin.template:
+        src: templates/hermes-home.env.j2
+        dest: /home/hermes/.hermes/.env
+        mode: "0600"
+      notify: restart dashboard
+
+    - name: Deploy ~/.hermes/config.yaml
+      ansible.builtin.copy:
+        src: files/config.yaml
+        dest: /home/hermes/.hermes/config.yaml
+        mode: "0644"
+      notify: restart dashboard
+
     - name: Deploy systemd service
       ansible.builtin.template:
         src: templates/hermes-grocery-gateway.service.j2
@@ -120,6 +157,14 @@
         mode: "0644"
       become: true
       notify: restart gateway
+
+    - name: Deploy hermes-dashboard systemd service
+      ansible.builtin.template:
+        src: templates/hermes-dashboard.service.j2
+        dest: /etc/systemd/system/hermes-dashboard.service
+        mode: "0644"
+      become: true
+      notify: restart dashboard
 
   handlers:
     - name: reload systemd
@@ -135,3 +180,17 @@
         state: restarted
       become: true
       listen: restart gateway
+
+    - name: reload systemd for dashboard
+      ansible.builtin.systemd:
+        daemon_reload: true
+      become: true
+      listen: restart dashboard
+
+    - name: enable and start hermes-dashboard
+      ansible.builtin.systemd:
+        name: hermes-dashboard
+        enabled: true
+        state: restarted
+      become: true
+      listen: restart dashboard
