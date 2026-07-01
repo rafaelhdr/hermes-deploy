@@ -12,6 +12,11 @@ providers:
   minimax:
     default_model: MiniMax-M2.7
 
+update_repos:
+  - rafaelhdr/hermes-deploy
+  - rafaelhdr/dotfiles
+  - rafaelhdr/homelab
+
 matrix_homeserver: https://matrix.org
 matrix_encryption: "true"
 matrix_e2ee_mode: "required"

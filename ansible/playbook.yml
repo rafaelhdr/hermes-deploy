@@ -45,14 +45,13 @@
       environment:
         HOME: /home/hermes
 
-    - name: Deploy GitHub App private key to temp file
+    - name: Deploy GitHub App private key
       ansible.builtin.copy:
         content: "{{ github_app_private_key }}"
-        dest: /tmp/.gh_app_key.pem
+        dest: /home/hermes/.hermes/github_app.pem
         mode: "0600"
         owner: hermes
       become: true
-      when: gh_auth_status.rc != 0
       no_log: true
 
     - name: Authenticate gh as rafaelhdr-bot GitHub App
@@ -62,7 +61,7 @@
         payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now-60))" "$((now+600))" "{{ github_app_id }}" \
           | base64 | tr -d '=\n' | tr '/+' '_-')
         sig=$(printf '%s.%s' "$header" "$payload" \
-          | openssl dgst -sha256 -sign /tmp/.gh_app_key.pem | base64 | tr -d '=\n' | tr '/+' '_-')
+          | openssl dgst -sha256 -sign /home/hermes/.hermes/github_app.pem | base64 | tr -d '=\n' | tr '/+' '_-')
         jwt="${header}.${payload}.${sig}"
 
         install_id=$(curl -sf \
@@ -84,13 +83,6 @@
         HOME: /home/hermes
       when: gh_auth_status.rc != 0
       no_log: true
-
-    - name: Remove GitHub App private key temp file
-      ansible.builtin.file:
-        path: /tmp/.gh_app_key.pem
-        state: absent
-      become: true
-      when: gh_auth_status.rc != 0
 
     - name: Install mautrix encryption extras, db drivers, and web deps
       ansible.builtin.pip:
@@ -128,6 +120,12 @@
       ansible.builtin.copy:
         src: files/AGENTS.md
         dest: "{{ app_dir }}/AGENTS.md"
+        mode: "0644"
+
+    - name: Deploy root AGENTS.md
+      ansible.builtin.copy:
+        src: files/AGENTS.root.md
+        dest: /home/hermes/.hermes/AGENTS.md
         mode: "0644"
 
     - name: Deploy SOUL.md
@@ -228,6 +226,22 @@
       notify:
         - restart dashboard
         - restart root gateway
+
+    - name: Ensure ~/.hermes/cron directory exists
+      ansible.builtin.file:
+        path: /home/hermes/.hermes/cron
+        state: directory
+        owner: hermes
+        mode: "0755"
+      become: true
+
+    - name: Deploy cron jobs
+      ansible.builtin.template:
+        src: templates/hermes-cron-jobs.json.j2
+        dest: /home/hermes/.hermes/cron/jobs.json
+        owner: hermes
+        mode: "0644"
+      become: true
 
     - name: Deploy systemd service
       ansible.builtin.template:
