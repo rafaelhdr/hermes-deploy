@@ -155,7 +155,7 @@ Note: `creates:` uses the old path for idempotency — it will need to be cleare
 
 **File:** `ansible/templates/config.yaml.j2`
 
-**Current:** `nikolaik/python-nodejs:python3.11-nodejs20`
+**Current:** `nikolaik/python-nodejs:python3.11-nodejs24`
 
 **How to check:** Visit https://hub.docker.com/r/nikolaik/python-nodejs/tags and find the latest tag matching `python3.x-nodejsY`. Update the four occurrences (`docker_image`, `singularity_image`, `modal_image`, `daytona_image`) in `config.yaml.j2`.
 
