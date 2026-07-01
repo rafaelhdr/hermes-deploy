@@ -31,8 +31,8 @@ hermes/
     │   └── packages/        # System packages role
     │       └── tasks/
     │           ├── main.yml          # Imports repositories then packages
-    │           ├── repositories.yml  # GitHub CLI repo, NodeSource repo
-    │           └── packages.yml      # apt install: gh, libolm-dev, nodejs
+    │           ├── repositories.yml  # GitHub CLI repo, NodeSource repo; Helm via get-helm-3 script
+    │           └── packages.yml      # apt install: gh, libolm-dev, neovim, nodejs
     ├── templates/           # Jinja2 templates deployed to server
     │   ├── config.base.yaml.j2         # Hermes Agent configuration base (shared settings)
     │   ├── config.grocery.yaml.j2      # Grocery-specific config (includes base)
@@ -100,7 +100,7 @@ just deploy
 The playbook runs in this order:
 
 1. Reads Terraform outputs → adds server as `grocery` host dynamically
-2. `packages` role → sets up apt repositories (GitHub CLI, NodeSource) and installs `gh`, `libolm-dev`, `nodejs`
+2. `packages` role → sets up apt repositories (GitHub CLI, NodeSource), installs Helm via get-helm-3 script, and installs `gh`, `libolm-dev`, `neovim`, `nodejs` via apt
 3. Authenticates `gh` as the `rafaelhdr-bot` GitHub App (JWT → installation token flow; skipped if already authenticated)
 4. Installs Python deps into `/home/hermes/.hermes/hermes-agent/venv`
 5. Builds the dashboard web frontend (`npm install && npm run build`)

@@ -4,6 +4,7 @@
     name:
       - gh
       - libolm-dev
+      - neovim
       - nodejs
     state: present
     update_cache: true

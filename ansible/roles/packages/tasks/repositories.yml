@@ -23,6 +23,18 @@
     state: absent
   become: true
 
+- name: Remove legacy Helm apt sources file
+  ansible.builtin.file:
+    path: /etc/apt/sources.list.d/helm.sources
+    state: absent
+  become: true
+
+- name: Install Helm via get-helm-3 script
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    creates: /usr/local/bin/helm
+  become: true
+
 - name: Add NodeSource repository for Node.js 24
   ansible.builtin.shell:
     cmd: curl -fsSL https://deb.nodesource.com/setup_24.x | bash -
