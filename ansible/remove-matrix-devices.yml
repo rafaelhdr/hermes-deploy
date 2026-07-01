@@ -1,4 +1,28 @@
 ---
+- name: Prepare inventory
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/secrets.yml
+  tasks:
+    - name: Read terraform outputs
+      ansible.builtin.command: terraform output -json
+      args:
+        chdir: ../terraform
+      register: tf_output
+      changed_when: false
+
+    - name: Add grocery host dynamically
+      ansible.builtin.add_host:
+        name: grocery
+        ansible_host: "{{ zerotier_ip }}"
+        ansible_user: "{{ tf_user }}"
+        groups: hermes
+      vars:
+        tf_user: >-
+          {{ (tf_output.stdout | from_json).ssh_connection.value
+             | regex_replace('^ssh ([^@]+)@.*', '\1') }}
+
 - name: Remove stale Matrix bot devices
   hosts: localhost
   gather_facts: false
@@ -57,3 +81,20 @@
       no_log: true
       loop_control:
         label: "{{ item.device_id }}"
+
+- name: Remove Matrix crypto stores on server
+  hosts: hermes
+  gather_facts: false
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Remove grocery Matrix store
+      ansible.builtin.file:
+        path: "{{ app_dir }}/platforms/matrix/store"
+        state: absent
+
+    - name: Remove root Matrix store
+      ansible.builtin.file:
+        path: /home/hermes/.hermes/platforms/matrix/store
+        state: absent

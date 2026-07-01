@@ -119,7 +119,7 @@
 
     - name: Deploy Hermes config
       ansible.builtin.template:
-        src: templates/config.yaml.j2
+        src: templates/config.grocery.yaml.j2
         dest: "{{ app_dir }}/config.yaml"
         mode: "0644"
       notify: restart gateway
@@ -136,7 +136,7 @@
         dest: "{{ app_dir }}/SOUL.md"
         mode: "0644"
 
-    - name: Log in to Matrix to obtain access token
+    - name: Log in to Matrix for grocery gateway
       ansible.builtin.uri:
         url: "{{ matrix_homeserver }}/_matrix/client/v3/login"
         method: POST
@@ -149,25 +149,54 @@
           password: "{{ matrix_password }}"
         status_code: 200
         return_content: true
-      register: matrix_login
+      register: matrix_login_grocery
       when: matrix_password is defined and matrix_password | length > 0
       no_log: true
       ignore_errors: true
 
-    - name: Set resolved access token and device id
+    - name: Set grocery access token and device id
       ansible.builtin.set_fact:
-        _matrix_access_token: >-
-          {{ matrix_login.json.access_token
-             if (matrix_login is defined and matrix_login is not failed and matrix_login.json is defined and matrix_login.json.access_token is defined)
+        _matrix_access_token_grocery: >-
+          {{ matrix_login_grocery.json.access_token
+             if (matrix_login_grocery is defined and matrix_login_grocery is not failed and matrix_login_grocery.json is defined and matrix_login_grocery.json.access_token is defined)
              else matrix_access_token | default('') }}
-        _matrix_device_id: >-
-          {{ matrix_login.json.device_id
-             if (matrix_login is defined and matrix_login is not failed and matrix_login.json is defined and matrix_login.json.device_id is defined)
+        _matrix_device_id_grocery: >-
+          {{ matrix_login_grocery.json.device_id
+             if (matrix_login_grocery is defined and matrix_login_grocery is not failed and matrix_login_grocery.json is defined and matrix_login_grocery.json.device_id is defined)
              else '' }}
 
-    - name: Remove Matrix crypto store for clean session
+    - name: Log in to Matrix for root gateway
+      ansible.builtin.uri:
+        url: "{{ matrix_homeserver }}/_matrix/client/v3/login"
+        method: POST
+        body_format: json
+        body:
+          type: m.login.password
+          identifier:
+            type: m.id.user
+            user: "{{ matrix_user_id }}"
+          password: "{{ matrix_password }}"
+        status_code: 200
+        return_content: true
+      register: matrix_login_root
+      when: matrix_password is defined and matrix_password | length > 0
+      no_log: true
+      ignore_errors: true
+
+    - name: Set root access token and device id
+      ansible.builtin.set_fact:
+        _matrix_access_token_root: >-
+          {{ matrix_login_root.json.access_token
+             if (matrix_login_root is defined and matrix_login_root is not failed and matrix_login_root.json is defined and matrix_login_root.json.access_token is defined)
+             else '' }}
+        _matrix_device_id_root: >-
+          {{ matrix_login_root.json.device_id
+             if (matrix_login_root is defined and matrix_login_root is not failed and matrix_login_root.json is defined and matrix_login_root.json.device_id is defined)
+             else '' }}
+
+    - name: Remove Matrix store for clean session
       ansible.builtin.file:
-        path: "{{ app_dir }}/platforms/matrix/store/crypto.db"
+        path: "{{ app_dir }}/platforms/matrix/store"
         state: absent
 
     - name: Deploy .env
@@ -182,14 +211,23 @@
         src: templates/hermes-home.env.j2
         dest: /home/hermes/.hermes/.env
         mode: "0600"
-      notify: restart dashboard
+      notify:
+        - restart dashboard
+        - restart root gateway
+
+    - name: Remove root Matrix store for clean session
+      ansible.builtin.file:
+        path: /home/hermes/.hermes/platforms/matrix/store
+        state: absent
 
     - name: Deploy ~/.hermes/config.yaml
       ansible.builtin.template:
-        src: templates/config.yaml.j2
+        src: templates/config.root.yaml.j2
         dest: /home/hermes/.hermes/config.yaml
         mode: "0644"
-      notify: restart dashboard
+      notify:
+        - restart dashboard
+        - restart root gateway
 
     - name: Deploy systemd service
       ansible.builtin.template:
@@ -198,6 +236,14 @@
         mode: "0644"
       become: true
       notify: restart gateway
+
+    - name: Deploy hermes-root-gateway systemd service
+      ansible.builtin.template:
+        src: templates/hermes-root-gateway.service.j2
+        dest: /etc/systemd/system/hermes-root-gateway.service
+        mode: "0644"
+      become: true
+      notify: restart root gateway
 
     - name: Deploy hermes-dashboard systemd service
       ansible.builtin.template:
@@ -221,6 +267,20 @@
         state: restarted
       become: true
       listen: restart gateway
+
+    - name: reload systemd for root gateway
+      ansible.builtin.systemd:
+        daemon_reload: true
+      become: true
+      listen: restart root gateway
+
+    - name: enable and start hermes-root-gateway
+      ansible.builtin.systemd:
+        name: hermes-root-gateway
+        enabled: true
+        state: restarted
+      become: true
+      listen: restart root gateway
 
     - name: reload systemd for dashboard
       ansible.builtin.systemd:

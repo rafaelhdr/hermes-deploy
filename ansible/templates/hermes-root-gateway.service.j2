@@ -1,0 +1,16 @@
+[Unit]
+Description=Hermes Root Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hermes
+Environment=HERMES_HOME=/home/hermes/.hermes
+ExecStart={{ hermes_bin | default('/home/hermes/.hermes/hermes-agent/venv/bin/hermes') }} gateway run
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=210
+
+[Install]
+WantedBy=default.target

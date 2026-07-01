@@ -26,7 +26,7 @@ agent:
 terminal:
   backend: local
   modal_mode: auto
-  cwd: /home/hermes/hermes-grocery
+  cwd: {{ app_dir }}
   timeout: 180
   env_passthrough: []
   shell_init_files: []
@@ -344,7 +344,7 @@ timezone: ''
 matrix:
   require_mention: false
   free_response_rooms: ''
-  allowed_rooms: '!XvaIvHAfyWIsaWsGOi:matrix.org'
+  allowed_rooms: '{{ matrix_home_room }}'
 approvals:
   mode: manual
   timeout: 60

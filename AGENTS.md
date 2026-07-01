@@ -34,10 +34,13 @@ hermes/
     │           ├── repositories.yml  # GitHub CLI repo, NodeSource repo
     │           └── packages.yml      # apt install: gh, libolm-dev, nodejs
     ├── templates/           # Jinja2 templates deployed to server
-    │   ├── config.yaml.j2              # Hermes Agent configuration
-    │   ├── .env.j2                     # Gateway environment (LLM keys, Matrix creds)
-    │   ├── hermes-home.env.j2          # Dashboard environment
+    │   ├── config.base.yaml.j2         # Hermes Agent configuration base (shared settings)
+    │   ├── config.grocery.yaml.j2      # Grocery-specific config (includes base)
+    │   ├── config.root.yaml.j2         # Root-specific config (sets app_dir + allowed_rooms, includes base)
+    │   ├── .env.j2                     # Grocery gateway environment (LLM keys, Matrix creds)
+    │   ├── hermes-home.env.j2          # Dashboard + root gateway environment
     │   ├── hermes-grocery-gateway.service.j2
+    │   ├── hermes-root-gateway.service.j2
     │   └── hermes-dashboard.service.j2
     └── files/
         ├── AGENTS.md        # Tool instructions for the deployed grocery bot
@@ -102,19 +105,19 @@ The playbook runs in this order:
 4. Installs Python deps into `/home/hermes/.hermes/hermes-agent/venv`
 5. Builds the dashboard web frontend (`npm install && npm run build`)
 6. Templates and deploys config files, `.env` files, and systemd services
-7. Enables and starts `hermes-grocery-gateway` and `hermes-dashboard`
+7. Enables and starts `hermes-grocery-gateway`, `hermes-root-gateway`, and `hermes-dashboard`
 
 Key paths on the server:
 
 ```
-/home/hermes/hermes-grocery/     # App directory (app_dir in vars/main.yml)
+/home/hermes/hermes-grocery/     # Grocery app directory (app_dir in vars/main.yml)
 ├── config.yaml                  # Rendered from templates/config.yaml.j2
 ├── .env                         # Rendered from templates/.env.j2 (mode 0600)
 ├── AGENTS.md                    # Copied from ansible/files/AGENTS.md
 └── SOUL.md                      # Copied from ansible/files/SOUL.md
 
-/home/hermes/.hermes/.env        # Dashboard env (rendered from hermes-home.env.j2)
-/home/hermes/.hermes/config.yaml # Dashboard config (same template as app config)
+/home/hermes/.hermes/.env        # Dashboard + root gateway env (rendered from hermes-home.env.j2)
+/home/hermes/.hermes/config.yaml # Dashboard + root gateway config (config.yaml.j2, cwd=~/.hermes)
 ```
 
 ## LLM provider
