@@ -1,0 +1,10 @@
+---
+- name: Install system packages
+  ansible.builtin.apt:
+    name:
+      - gh
+      - libolm-dev
+      - nodejs
+    state: present
+    update_cache: true
+  become: true

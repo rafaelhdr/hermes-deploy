@@ -31,25 +31,66 @@
     - vars/secrets.yml
 
   tasks:
-    - name: Install libolm-dev
-      ansible.builtin.apt:
-        name: libolm-dev
-        state: present
-        update_cache: true
-      become: true
+    - name: Set up package repositories and install system packages
+      ansible.builtin.import_role:
+        name: packages
 
-    - name: Install Node.js 22 (NodeSource)
-      ansible.builtin.shell:
-        cmd: curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-        creates: /etc/apt/sources.list.d/nodesource.list
+    - name: Check gh auth status
+      ansible.builtin.command: gh auth status
+      register: gh_auth_status
+      changed_when: false
+      failed_when: false
       become: true
+      become_user: hermes
+      environment:
+        HOME: /home/hermes
 
-    - name: Install Node.js
-      ansible.builtin.apt:
-        name: nodejs
-        state: present
-        update_cache: true
+    - name: Deploy GitHub App private key to temp file
+      ansible.builtin.copy:
+        content: "{{ github_app_private_key }}"
+        dest: /tmp/.gh_app_key.pem
+        mode: "0600"
+        owner: hermes
       become: true
+      when: gh_auth_status.rc != 0
+      no_log: true
+
+    - name: Authenticate gh as rafaelhdr-bot GitHub App
+      ansible.builtin.shell: |
+        header=$(printf '{"alg":"RS256","typ":"JWT"}' | base64 | tr -d '=\n' | tr '/+' '_-')
+        now=$(date +%s)
+        payload=$(printf '{"iat":%d,"exp":%d,"iss":"%s"}' "$((now-60))" "$((now+600))" "{{ github_app_id }}" \
+          | base64 | tr -d '=\n' | tr '/+' '_-')
+        sig=$(printf '%s.%s' "$header" "$payload" \
+          | openssl dgst -sha256 -sign /tmp/.gh_app_key.pem | base64 | tr -d '=\n' | tr '/+' '_-')
+        jwt="${header}.${payload}.${sig}"
+
+        install_id=$(curl -sf \
+          -H "Authorization: Bearer $jwt" \
+          -H "Accept: application/vnd.github+json" \
+          https://api.github.com/app/installations \
+          | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+
+        token=$(curl -sf -X POST \
+          -H "Authorization: Bearer $jwt" \
+          -H "Accept: application/vnd.github+json" \
+          "https://api.github.com/app/installations/${install_id}/access_tokens" \
+          | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+        printf '%s' "$token" | gh auth login --with-token --hostname github.com
+      become: true
+      become_user: hermes
+      environment:
+        HOME: /home/hermes
+      when: gh_auth_status.rc != 0
+      no_log: true
+
+    - name: Remove GitHub App private key temp file
+      ansible.builtin.file:
+        path: /tmp/.gh_app_key.pem
+        state: absent
+      become: true
+      when: gh_auth_status.rc != 0
 
     - name: Install mautrix encryption extras, db drivers, and web deps
       ansible.builtin.pip:
