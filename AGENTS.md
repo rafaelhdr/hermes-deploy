@@ -140,16 +140,16 @@ This section is for a scheduled agent that checks whether pinned versions are st
 
 **File:** `ansible/roles/packages/tasks/repositories.yml`
 
-**Current:** NodeSource `setup_22.x` (LTS)
+**Current:** NodeSource `setup_24.x` (LTS)
 
-**How to check:** Visit https://nodejs.org/en/about/previous-releases — the current LTS major version is listed there. If it is higher than 22, update the two references in `repositories.yml`:
+**How to check:** Visit https://nodejs.org/en/about/previous-releases — the current LTS major version is listed there. If it is higher than 24, update the two references in `repositories.yml`:
 
 ```yaml
 cmd: curl -fsSL https://deb.nodesource.com/setup_<NEW>.x | bash -
 creates: /etc/apt/sources.list.d/nodesource.list
 ```
 
-Note: `creates:` uses the old path for idempotency — it will need to be cleared on the server on next deploy if the major version changes. Add a task to remove the old file before the shell command, mirroring how `github-cli.list` is cleaned up.
+Note: `creates:` uses the old path for idempotency — it will need to be cleared on the server on next deploy if the major version changes. The task that adds the new repository now runs `state: absent` on the old file before the shell command, mirroring how `github-cli.list` is cleaned up.
 
 ### Docker image for terminal backend
 
