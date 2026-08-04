@@ -22,3 +22,5 @@ matrix_encryption: "true"
 matrix_e2ee_mode: "required"
 matrix_home_room_thread_id: ""
 matrix_home_room_thread_id_root: ""
+
+hermes_timezone: Europe/Amsterdam

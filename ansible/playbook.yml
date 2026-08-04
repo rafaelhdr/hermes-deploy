@@ -134,6 +134,22 @@
         dest: "{{ app_dir }}/SOUL.md"
         mode: "0644"
 
+    - name: Ensure grocery cron directory exists
+      ansible.builtin.file:
+        path: "{{ app_dir }}/cron"
+        state: directory
+        owner: hermes
+        mode: "0755"
+      become: true
+
+    - name: Deploy grocery cron jobs
+      ansible.builtin.template:
+        src: templates/hermes-grocery-cron-jobs.json.j2
+        dest: "{{ app_dir }}/cron/jobs.json"
+        owner: hermes
+        mode: "0644"
+      become: true
+
     - name: Log in to Matrix for grocery gateway
       ansible.builtin.uri:
         url: "{{ matrix_homeserver }}/_matrix/client/v3/login"

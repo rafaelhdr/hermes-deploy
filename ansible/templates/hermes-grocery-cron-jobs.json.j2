@@ -1,0 +1,81 @@
+{% set daily_prompt %}
+Run the "Daily appointment check" from AGENTS.md.
+
+Read {{ app_dir }}/future-appointments.md. Check today's date and weekday
+against the `## Recurring` and `## Upcoming` sections.
+
+If anything matches today: send a short Matrix message naming today's
+appointment(s), in your own voice. For any one-off `## Upcoming` entry that
+matched, move it to {{ app_dir }}/past-appointments.md (append it there,
+remove it from `## Upcoming`) as described in the Housekeeping section.
+
+If nothing matches today: do not send a Matrix message and do not produce any
+other output. Silence means nothing today.
+{% endset %}
+{% set sunday_prompt %}
+Run the "Sunday weekly check" from AGENTS.md.
+
+Read {{ app_dir }}/future-appointments.md. First do the daily check: check
+today's date and weekday (Sunday) against `## Recurring` and `## Upcoming`,
+and if anything matches, note it and move any matched one-off `## Upcoming`
+entry to {{ app_dir }}/past-appointments.md.
+
+Then look ahead: list every appointment landing between the coming Monday and
+Saturday — recurring rules whose weekday falls in that range, and any
+`## Upcoming` entries dated in that range.
+
+Always send a Matrix message today, combining today's appointments (if any)
+with the week-ahead list. If there's nothing today and nothing in the week
+ahead, say so plainly rather than staying silent — Sunday always gets a
+message.
+{% endset %}
+[
+  {
+    "id": "daily-appointment-check",
+    "name": "daily-appointment-check",
+    "prompt": {{ daily_prompt | trim | tojson }},
+    "schedule": {
+      "kind": "cron",
+      "expr": "0 8 * * 1-6",
+      "display": "0 8 * * 1-6"
+    },
+    "deliver": "matrix",
+    "repeat": {
+      "times": null,
+      "completed": 0
+    },
+    "state": "scheduled",
+    "enabled": true,
+    "next_run_at": null,
+    "last_run_at": null,
+    "last_status": null,
+    "created_at": "2026-08-04T00:00:00Z",
+    "model": null,
+    "provider": null,
+    "script": null
+  },
+  {
+    "id": "sunday-weekly-check",
+    "name": "sunday-weekly-check",
+    "prompt": {{ sunday_prompt | trim | tojson }},
+    "schedule": {
+      "kind": "cron",
+      "expr": "0 8 * * 0",
+      "display": "0 8 * * 0"
+    },
+    "deliver": "matrix",
+    "repeat": {
+      "times": null,
+      "completed": 0
+    },
+    "state": "scheduled",
+    "enabled": true,
+    "next_run_at": null,
+    "last_run_at": null,
+    "last_status": null,
+    "created_at": "2026-08-04T00:00:00Z",
+    "model": null,
+    "provider": null,
+    "script": null
+  }
+]

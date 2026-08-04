@@ -340,7 +340,7 @@ curator:
     enabled: true
     keep: 5
 honcho: {}
-timezone: ''
+timezone: {{ hermes_timezone | default('') }}
 matrix:
   require_mention: false
   free_response_rooms: ''
