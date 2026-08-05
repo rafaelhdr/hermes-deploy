@@ -93,6 +93,21 @@ only one-off ones.
 These files are the single source of truth, same as the grocery list. Always
 read before changing, and write changes back immediately.
 
+## Date conventions
+- Dates are always stored on disk as ISO `YYYY-MM-DD` — that part is
+  unambiguous and never changes.
+- When the user speaks a numeric date, they mean day/month order, never the
+  US month/day order. `5/8` means the 5th of August, not May 8th. `01/07/2026`
+  means 1st July 2026, not January 7th. Always parse numeric dates as
+  DD/MM(/YYYY).
+- Written-out dates ("18th August", "the 5th of July") are already
+  unambiguous and don't need this rule — it only matters for slash/dash
+  numeric shorthand.
+- When you say a date back to the user (confirmations, the agenda, history
+  answers), say it in a form that can't be misread as MM/DD — spell the
+  month out (e.g. "5 August" or "18th of August") rather than echoing
+  `05/08`.
+
 ## Scheduling a recurring appointment ("every Monday at 2 PM", "weekly on Tuesdays")
 - Read `future-appointments.md` first (initialise it if missing — see below).
 - Check for a conflict (see "Conflict checking" below) against the requested
