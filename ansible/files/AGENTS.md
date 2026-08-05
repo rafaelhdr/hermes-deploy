@@ -77,10 +77,18 @@ Appointments live in two files, next to grocery.md:
   `<YYYY-MM-DD> <HH:MM> — <description>` (e.g. `2026-08-18 — Go to
   Amsterdam`). Not every one-off appointment has a time — that's fine, treat
   it as an all-day event.
+  - Multi-day events use a date range instead of a single date:
+    `<YYYY-MM-DD> to <YYYY-MM-DD> — <description>` (e.g. `2026-07-01 to
+    2026-07-10 — Friend visiting`). This is one single line/event spanning
+    every day in that span (inclusive), the same way a multi-day all-day
+    event works in Google Calendar — not a shorthand for ten separate
+    entries.
 
 `past-appointments.md` is a flat log, one line per past one-off appointment,
 same format as `## Upcoming`: `<YYYY-MM-DD> — <description>` (with time if it
-had one). Recurring appointments are never logged here — only one-off ones.
+had one), or `<YYYY-MM-DD> to <YYYY-MM-DD> — <description>` for a multi-day
+event once it's fully over. Recurring appointments are never logged here —
+only one-off ones.
 
 These files are the single source of truth, same as the grocery list. Always
 read before changing, and write changes back immediately.
@@ -103,13 +111,32 @@ read before changing, and write changes back immediately.
   other lines.
 - Confirm what you added, and mention the conflict warning if there was one.
 
+## Scheduling a multi-day appointment ("friend visiting between July 1st and July 10th", "staying at the cabin from the 3rd to the 6th")
+- Read `future-appointments.md` first.
+- Resolve both the start and end date the same way as a single-day
+  appointment (default to current year, roll to next year if already
+  passed). If the end date ends up earlier than the start date after
+  resolving each independently, the range crosses a year boundary — roll the
+  end date's year forward by one instead.
+- Check for a conflict against every day in the range, inclusive (see
+  "Conflict checking" below) — not just the start and end days.
+- Append one line under `## Upcoming` in the format `<YYYY-MM-DD> to
+  <YYYY-MM-DD> — <description>`. This is a single event, not one entry per
+  day.
+- Confirm what you added (say the resolved date range back), and mention
+  every conflict warning found across the whole span — but add the
+  appointment regardless. The user decides afterwards whether to keep or
+  cancel whatever it conflicts with.
+
 ## Showing the agenda ("list agenda", "show agenda", "what's the agenda?", "what's coming up?")
 - Read `future-appointments.md`.
 - For each `## Recurring` rule, work out its next occurrence from today's
   date (e.g. "Every Monday 14:00" → the coming Monday).
-- Combine that with every dated entry in `## Upcoming`.
+- Combine that with every dated entry in `## Upcoming`, including ranges.
 - List them together, soonest first, each with its date (and time, if it has
-  one) and description. If both sections are empty, say the agenda's clear.
+  one) and description. For a range, show the full span, and if today falls
+  inside it, say it's ongoing (e.g. "Friend visiting, 1–10 Jul (ongoing)").
+  If both sections are empty, say the agenda's clear.
 - This is a different command from plain "list" — "list" alone always means
   the grocery list (see Grocery List above). Only "list agenda" / "agenda" /
   similar phrasing that explicitly names the agenda or calendar triggers
@@ -128,14 +155,31 @@ read before changing, and write changes back immediately.
   just flag it.
 - If the new appointment has no time (all-day) or the existing one doesn't,
   don't try to guess a time conflict — just note both are on the same day.
+- **Multi-day ranges**: when the new or existing appointment is a date range,
+  a conflict is anything (recurring or one-off) that falls on *any* day
+  within that range, not just the start or end day. Check every day of the
+  range against `## Recurring` (by weekday) and every other `## Upcoming`
+  entry (by date, or by range overlap if the other entry is also a range).
+  Warn about each specific date/appointment that conflicts (e.g. "heads up —
+  your dentist appointment on the 4th falls in the middle of that visit"),
+  but always add the new appointment regardless — the user decides
+  afterwards whether to keep, move, or cancel the thing it conflicts with.
 
 ## Answering "what did we do on [date]"
 - Read `past-appointments.md`.
 - Resolve the date the same way as scheduling (default to current year,
   roll back a year instead of forward if the phrasing is clearly about the
   past and ambiguous).
-- List every line matching that date, plainly. If nothing matches, say
-  nothing happened that day (or that you have no record of it).
+- List every line matching that date, plainly — for a range entry, it
+  matches if the queried date falls anywhere inside the range, not just on
+  its start or end day.
+- Also check `future-appointments.md`'s `## Upcoming` section for any range
+  entry that has already started but hasn't ended yet (start date is on or
+  before today) and whose span covers the queried date — it's still there
+  because it hasn't been archived yet, but a day inside it has already
+  happened and should still answer the question.
+- If nothing matches, say nothing happened that day (or that you have no
+  record of it).
 
 ## Housekeeping
 - When a one-off `## Upcoming` appointment's date is in the past, move it:
@@ -143,16 +187,24 @@ read before changing, and write changes back immediately.
   This normally happens as part of the daily appointment check, but do it
   any time you notice a stale entry while reading the file for something
   else.
+- A multi-day range entry only moves to `past-appointments.md` once its
+  **end** date is in the past — not its start date. While the range has
+  started but not yet ended, it stays in `## Upcoming` (it's ongoing).
 - Recurring `## Recurring` entries are never moved or removed automatically —
   they stay until someone explicitly asks to cancel or change them.
 
 ## Daily appointment check (from the cron job)
 - Look at today's date and weekday.
 - Check `## Recurring` for a matching weekday, and `## Upcoming` for a
-  matching date.
+  matching date — a range entry matches every day from its start to its end
+  date, inclusive, so it triggers on each day it's active, not just the
+  first.
 - If anything matches: send a short message naming today's appointment(s).
-  For any one-off `## Upcoming` match, move it to `past-appointments.md` as
-  described above.
+  For an ongoing range, mention that it's ongoing (e.g. "Friend visiting
+  continues today"). For any one-off `## Upcoming` match whose date (or, for
+  a range, whose *end* date) is today, move it to `past-appointments.md` as
+  described above — a range only gets archived on the day its span ends, not
+  every day it's active.
 - If nothing matches: send no message at all. Do not say "nothing today" —
   silence means nothing today.
 
@@ -160,7 +212,10 @@ read before changing, and write changes back immediately.
 - Do the daily check above for today (Sunday).
 - Also look ahead: list every appointment landing between the coming Monday
   and Saturday — recurring rules whose weekday falls in that range, and any
-  `## Upcoming` entries dated in that range.
+  `## Upcoming` entries dated in that range, including a range entry that
+  merely *overlaps* that window at all (starts before it and/or ends inside
+  or after it) — mention it once, with its full span, rather than once per
+  day.
 - Always send a message on Sunday, even if the week ahead is empty (say so
   plainly rather than staying silent).
 
